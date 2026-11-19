@@ -1,0 +1,110 @@
+@import "tailwindcss";
+
+/* ─── Base Styles ────────────────────────────────────────────────────────── */
+
+html {
+  -webkit-tap-highlight-color: transparent;
+  overflow: hidden;
+  height: 100%;
+}
+
+body {
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+}
+
+#root {
+  height: 100%;
+}
+
+/* ─── Animations ─────────────────────────────────────────────────────────── */
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes bounce-slow {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(74, 222, 128, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(74, 222, 128, 0.4);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-bounce-slow {
+  animation: bounce-slow 2s ease-in-out infinite;
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+/* ─── Scrollbar ──────────────────────────────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.4);
+}
+
+/* ─── Utility Classes ────────────────────────────────────────────────────── */
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Keyboard hint styling */
+kbd {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Mono', monospace;
+}
+
+/* Prevent text selection on game elements */
+canvas {
+  -webkit-touch-callout: none;
+  image-rendering: -webkit-optimize-contrast;
+}
+
+/* Active state for touch buttons */
+button:active {
+  transition-duration: 50ms;
+}
+
+/* Smooth transitions for all interactive elements */
+button {
+  -webkit-tap-highlight-color: transparent;
+}
