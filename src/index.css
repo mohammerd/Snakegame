@@ -1,38 +1,31 @@
 @import "tailwindcss";
 
-@theme {
-  --color-gray-750: #2d3748;
+/* ─── Base Styles ────────────────────────────────────────────────────────── */
+
+html {
+  -webkit-tap-highlight-color: transparent;
+  overflow: hidden;
+  height: 100%;
 }
 
-/* Food pulse animation */
-@keyframes food-pulse {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.15);
-    opacity: 0.85;
-  }
+body {
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
 }
 
-/* Snake head pulse */
-@keyframes head-pulse {
-  0%, 100% {
-    transform: scale(1);
-    box-shadow: 0 0 8px rgba(74, 222, 128, 0.4);
-  }
-  50% {
-    transform: scale(1.05);
-    box-shadow: 0 0 12px rgba(74, 222, 128, 0.6);
-  }
+#root {
+  height: 100%;
 }
 
-/* Fade in animation */
+/* ─── Animations ─────────────────────────────────────────────────────────── */
+
 @keyframes fade-in {
   from {
     opacity: 0;
-    transform: scale(0.95);
+    transform: scale(0.96);
   }
   to {
     opacity: 1;
@@ -40,50 +33,40 @@
   }
 }
 
-/* Score pop animation */
-@keyframes score-pop {
-  0% {
-    transform: scale(1);
+@keyframes bounce-slow {
+  0%, 100% {
+    transform: translateY(0);
   }
   50% {
-    transform: scale(1.3);
-  }
-  100% {
-    transform: scale(1);
+    transform: translateY(-12px);
   }
 }
 
-.animate-food-pulse {
-  animation: food-pulse 1s ease-in-out infinite;
-}
-
-.animate-head-pulse {
-  animation: head-pulse 0.5s ease-in-out infinite;
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(74, 222, 128, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(74, 222, 128, 0.4);
+  }
 }
 
 .animate-fade-in {
-  animation: fade-in 0.3s ease-out forwards;
+  animation: fade-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-.animate-score-pop {
-  animation: score-pop 0.3s ease-out;
+.animate-bounce-slow {
+  animation: bounce-slow 2s ease-in-out infinite;
 }
 
-/* Smooth scrolling and touch behavior */
-html {
-  -webkit-tap-highlight-color: transparent;
-  overflow: hidden;
+.animate-glow-pulse {
+  animation: glow-pulse 2s ease-in-out infinite;
 }
 
-body {
-  overscroll-behavior: none;
-  -webkit-user-select: none;
-  user-select: none;
-}
+/* ─── Scrollbar ──────────────────────────────────────────────────────────── */
 
-/* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
 }
 
 ::-webkit-scrollbar-track {
@@ -91,11 +74,37 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #4a5568;
-  border-radius: 3px;
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 2px;
 }
 
-/* Grid cell subtle border */
-.grid > div {
-  border: 0.5px solid rgba(75, 85, 99, 0.15);
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.4);
+}
+
+/* ─── Utility Classes ────────────────────────────────────────────────────── */
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Keyboard hint styling */
+kbd {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Mono', monospace;
+}
+
+/* Prevent text selection on game elements */
+canvas {
+  -webkit-touch-callout: none;
+  image-rendering: -webkit-optimize-contrast;
+}
+
+/* Active state for touch buttons */
+button:active {
+  transition-duration: 50ms;
+}
+
+/* Smooth transitions for all interactive elements */
+button {
+  -webkit-tap-highlight-color: transparent;
 }
