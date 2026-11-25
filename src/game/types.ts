@@ -2,7 +2,7 @@
 
 export type Direction = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';
 export type Difficulty = 'easy' | 'medium' | 'hard' | 'insane';
-export type GamePhase = 'menu' | 'playing' | 'paused' | 'gameover';
+export type GamePhase = 'menu' | 'playing' | 'paused' | 'gameover' | 'won';
 export type FoodType = 'normal' | 'bonus' | 'golden';
 
 export interface Vec2 {
@@ -64,6 +64,10 @@ export interface GameState {
   deathAnimation: number;
 }
 
+export interface TickResult extends GameState {
+  ateFood: Food | null;
+}
+
 export interface GameConfig {
   gridSize: number;
   cellSize: number;
@@ -80,6 +84,7 @@ export interface GameConfig {
 
 export interface PlayerStats {
   gamesPlayed: number;
+  gamesWon: number;
   totalScore: number;
   totalFoodEaten: number;
   bestScore: Record<Difficulty, number>;
