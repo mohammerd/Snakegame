@@ -7,16 +7,26 @@ class AudioEngine {
   private enabled = true;
   private masterGain: GainNode | null = null;
 
-  private getContext(): AudioContext {
+  private getContext(): AudioContext | null {
     if (!this.ctx) {
-      this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const AudioContextConstructor =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+
+      if (!AudioContextConstructor) return null;
+
+      this.ctx = new AudioContextConstructor();
       this.masterGain = this.ctx.createGain();
-      this.masterGain.gain.value = 0.3;
+      this.masterGain.gain.value = this.enabled ? 0.3 : 0;
       this.masterGain.connect(this.ctx.destination);
     }
+
     if (this.ctx.state === 'suspended') {
-      this.ctx.resume();
+      void this.ctx.resume().catch(() => {
+        // Audio can be blocked until the next user interaction.
+      });
     }
+
     return this.ctx;
   }
 
@@ -36,6 +46,8 @@ class AudioEngine {
   ) {
     if (!this.enabled) return;
     const ctx = this.getContext();
+    if (!ctx) return;
+
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 
@@ -84,6 +96,14 @@ class AudioEngine {
       setTimeout(() => {
         this.playTone(f, 0.3, 'sawtooth', 0.15);
       }, i * 120);
+    });
+  }
+
+  /** Victory - bright ascending fanfare */
+  playWin() {
+    const freqs = [523, 659, 784, 1047, 1318];
+    freqs.forEach((frequency, index) => {
+      setTimeout(() => this.playTone(frequency, 0.22, 'sine', 0.28), index * 75);
     });
   }
 
