@@ -9,6 +9,7 @@ export default function App() {
     settings,
     stats,
     highScore,
+    lastRunRecord,
     initRenderer,
     start,
     pause,
@@ -240,7 +241,7 @@ export default function App() {
             {gameState.phase === 'won' && (
               <div className="text-green-400 text-sm mb-2 font-semibold">🏆 You filled the board. You win.</div>
             )}
-            {gameState.score > highScore && gameState.score > 0 && (
+            {lastRunRecord && (
               <div className="text-green-400 text-sm mb-3 animate-pulse font-semibold">
                 New high score.
               </div>
