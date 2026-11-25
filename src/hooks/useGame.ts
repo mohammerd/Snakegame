@@ -78,6 +78,8 @@ function readStats(): PlayerStats {
 export function useGame() {
   const [settings, setSettings] = useState<GameSettings>(readSettings);
   const [stats, setStats] = useState<PlayerStats>(readStats);
+  const statsRef = useRef(stats);
+  const [lastRunRecord, setLastRunRecord] = useState(false);
   const [initialGameState] = useState(() => createInitialState(settings.difficulty));
   const stateRef = useRef<GameState>(initialGameState);
   const rendererRef = useRef<GameRenderer | null>(null);
@@ -126,6 +128,7 @@ export function useGame() {
   }, [settings]);
 
   useEffect(() => {
+    statsRef.current = stats;
     try {
       localStorage.setItem(STORAGE_KEYS.stats, JSON.stringify(stats));
     } catch {
@@ -197,6 +200,9 @@ export function useGame() {
             }
           }
 
+          const difficulty = settingsRef.current.difficulty;
+          setLastRunRecord(tickResult.score > statsRef.current.bestScore[difficulty]);
+
           setStats(previous => ({
             gamesPlayed: previous.gamesPlayed + 1,
             gamesWon: previous.gamesWon + (tickResult.phase === 'won' ? 1 : 0),
@@ -264,6 +270,7 @@ export function useGame() {
   }, [settings]);
 
   const start = useCallback(() => {
+    setLastRunRecord(false);
     const nextState = startGame(stateRef.current, settingsRef.current.difficulty);
     stateRef.current = nextState;
     publishDisplayState(nextState);
@@ -381,6 +388,7 @@ export function useGame() {
     settings,
     stats,
     highScore: stats.bestScore[settings.difficulty],
+    lastRunRecord,
     initRenderer,
     start,
     pause,
