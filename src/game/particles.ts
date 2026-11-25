@@ -10,7 +10,7 @@ export class ParticleSystem {
   /** Emit particles when food is eaten */
   emitEat(pos: Vec2, cellSize: number, theme: string, combo: number) {
     const colors = THEME_COLORS[theme as keyof typeof THEME_COLORS];
-    const count = 8 + combo * 3;
+    const count = Math.min(8 + combo * 3, 40);
     const px = pos.x * cellSize + cellSize / 2;
     const py = pos.y * cellSize + cellSize / 2;
 
@@ -111,13 +111,16 @@ export class ParticleSystem {
 
   /** Update all particles */
   update(dt: number) {
+    const frameScale = Math.max(0, Math.min(dt * 60, 3));
+    const damping = Math.pow(0.95, frameScale);
+
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const p = this.particles[i];
       p.life -= dt / p.maxLife;
-      p.x += p.vx;
-      p.y += p.vy;
-      p.vx *= 0.95;
-      p.vy *= 0.95;
+      p.x += p.vx * frameScale;
+      p.y += p.vy * frameScale;
+      p.vx *= damping;
+      p.vy *= damping;
 
       if (p.type === 'ring') {
         p.size += dt * 200;
