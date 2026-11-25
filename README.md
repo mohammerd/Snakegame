@@ -45,8 +45,8 @@ npm run typecheck
 Game preferences, personal-best scores and play statistics stay in the browser's local storage. Clearing site data in the browser will reset those records.
 
 
-## Static hosting
+## Static integration
 
-The game can be deployed directly to GitHub Pages at `https://mohammerd.github.io/Snakegame/`.
-It is a browser-only game: no API keys, backend, database, account, or Supabase project is required.
-Scores, settings, and statistics are stored locally in the player's browser.
+The personal website repository builds this game with Vite and includes its static `dist/` output at `/Snakegame/` during the existing GitHub Pages deployment. The game source remains independent in this repository.
+
+This is a browser-only game: no API keys, backend, database, account, or Supabase project is required. Scores, settings, and statistics are stored locally in the player's browser.
