@@ -1,17 +1,42 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import type { GameState, Direction, GameSettings, PlayerStats } from '../game/types';
+import type { GameState, Direction, Difficulty, GameSettings, PlayerStats } from '../game/types';
 import { DEFAULT_SETTINGS, DEFAULT_STATS, STORAGE_KEYS, CONFIG } from '../game/constants';
 import { createInitialState, startGame, togglePause, queueDirection, tick } from '../game/engine';
 import { GameRenderer } from '../game/renderer';
 import { audio } from '../game/audio';
 
+const DIFFICULTIES: Difficulty[] = ['easy', 'medium', 'hard', 'insane'];
+const THEMES: GameSettings['theme'][] = ['dark', 'midnight', 'forest'];
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
 function readSettings(): GameSettings {
   try {
     const stored = localStorage.getItem(STORAGE_KEYS.settings);
     if (!stored) return DEFAULT_SETTINGS;
+
     const parsed: unknown = JSON.parse(stored);
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return DEFAULT_SETTINGS;
-    return { ...DEFAULT_SETTINGS, ...parsed };
+    if (!isRecord(parsed)) return DEFAULT_SETTINGS;
+
+    return {
+      difficulty: DIFFICULTIES.includes(parsed.difficulty as Difficulty)
+        ? (parsed.difficulty as Difficulty)
+        : DEFAULT_SETTINGS.difficulty,
+      theme: THEMES.includes(parsed.theme as GameSettings['theme'])
+        ? (parsed.theme as GameSettings['theme'])
+        : DEFAULT_SETTINGS.theme,
+      soundEnabled:
+        typeof parsed.soundEnabled === 'boolean'
+          ? parsed.soundEnabled
+          : DEFAULT_SETTINGS.soundEnabled,
+      particlesEnabled:
+        typeof parsed.particlesEnabled === 'boolean'
+          ? parsed.particlesEnabled
+          : DEFAULT_SETTINGS.particlesEnabled,
+      showGrid: typeof parsed.showGrid === 'boolean' ? parsed.showGrid : DEFAULT_SETTINGS.showGrid,
+    };
   } catch {
     return DEFAULT_SETTINGS;
   }
@@ -21,22 +46,35 @@ function readStats(): PlayerStats {
   try {
     const stored = localStorage.getItem(STORAGE_KEYS.stats);
     if (!stored) return DEFAULT_STATS;
-    const parsed = JSON.parse(stored) as Partial<PlayerStats>;
-    if (!parsed || typeof parsed !== 'object') return DEFAULT_STATS;
+
+    const parsed: unknown = JSON.parse(stored);
+    if (!isRecord(parsed)) return DEFAULT_STATS;
+
+    const best = isRecord(parsed.bestScore) ? parsed.bestScore : {};
+    const score = (value: unknown, fallback: number) =>
+      typeof value === 'number' && Number.isFinite(value) && value >= 0
+        ? value
+        : fallback;
 
     return {
-      ...DEFAULT_STATS,
-      ...parsed,
+      gamesPlayed: score(parsed.gamesPlayed, 0),
+      gamesWon: score(parsed.gamesWon, 0),
+      totalScore: score(parsed.totalScore, 0),
+      totalFoodEaten: score(parsed.totalFoodEaten, 0),
       bestScore: {
-        ...DEFAULT_STATS.bestScore,
-        ...(parsed.bestScore && typeof parsed.bestScore === 'object' ? parsed.bestScore : {}),
+        easy: score(best.easy, 0),
+        medium: score(best.medium, 0),
+        hard: score(best.hard, 0),
+        insane: score(best.insane, 0),
       },
+      bestCombo: score(parsed.bestCombo, 0),
+      longestSnake: Math.max(3, score(parsed.longestSnake, 3)),
+      totalTimePlayed: score(parsed.totalTimePlayed, 0),
     };
   } catch {
     return DEFAULT_STATS;
   }
 }
-
 export function useGame() {
   const [settings, setSettings] = useState<GameSettings>(readSettings);
   const [stats, setStats] = useState<PlayerStats>(readStats);
@@ -180,21 +218,25 @@ export function useGame() {
         nextState = tickResult;
       }
 
-      if (nextState.shake.elapsed < nextState.shake.duration) {
-        nextState = {
-          ...nextState,
-          shake: { ...nextState.shake, elapsed: nextState.shake.elapsed + dt },
-        };
-      }
-
-      if (nextState.deathAnimation > 0) {
-        nextState = {
-          ...nextState,
-          deathAnimation: Math.max(0, nextState.deathAnimation - dt * 2),
-        };
-      }
 
       stateRef.current = nextState;
+    }
+
+    // Keep the death presentation moving after gameplay has stopped.
+    let animationState = stateRef.current;
+    if (animationState.phase === 'gameover') {
+      const shake = animationState.shake;
+      if (shake.elapsed < shake.duration || animationState.deathAnimation > 0) {
+        animationState = {
+          ...animationState,
+          shake: {
+            ...shake,
+            elapsed: Math.min(shake.duration, shake.elapsed + dt),
+          },
+          deathAnimation: Math.max(0, animationState.deathAnimation - dt * 2),
+        };
+        stateRef.current = animationState;
+      }
     }
 
     const renderState = stateRef.current;
