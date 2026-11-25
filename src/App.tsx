@@ -9,6 +9,7 @@ export default function App() {
     settings,
     stats,
     highScore,
+    lastRunRecord,
     initRenderer,
     start,
     pause,
@@ -25,8 +26,8 @@ export default function App() {
   // Responsive canvas sizing
   useEffect(() => {
     const updateSize = () => {
-      const maxSize = Math.min(window.innerWidth - 32, window.innerHeight - 280, 500);
-      setCanvasSize(Math.max(280, maxSize));
+      const maxSize = Math.min(window.innerWidth - 32, window.innerHeight - 300, 500);
+      setCanvasSize(Math.max(220, maxSize));
     };
     updateSize();
     window.addEventListener('resize', updateSize);
@@ -64,7 +65,7 @@ export default function App() {
 
     if (Math.max(absDx, absDy) < 25) {
       // Tap
-      if (gameState.phase === 'menu' || gameState.phase === 'gameover') start();
+      if (gameState.phase === 'menu' || gameState.phase === 'gameover' || gameState.phase === 'won') start();
       else pause();
     } else if (absDx > absDy) {
       changeDirection(dx > 0 ? 'RIGHT' : 'LEFT');
@@ -226,10 +227,10 @@ export default function App() {
           </div>
         )}
 
-        {gameState.phase === 'gameover' && (
+        {(gameState.phase === 'gameover' || gameState.phase === 'won') && (
           <div className="absolute inset-0 bg-black/70 backdrop-blur-md flex flex-col items-center justify-center animate-fade-in">
-            <div className="text-5xl mb-2">💀</div>
-            <h2 className="text-2xl font-bold text-white mb-1">Game Over</h2>
+            <div className="text-5xl mb-2">{gameState.phase === 'won' ? '🏆' : '💀'}</div>
+            <h2 className="text-2xl font-bold text-white mb-1">{gameState.phase === 'won' ? 'Board Cleared!' : 'Game Over'}</h2>
             <div className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-400 mb-1">
               {gameState.score.toLocaleString()}
             </div>
@@ -237,9 +238,12 @@ export default function App() {
               <span>🍎 {gameState.foodEaten} food</span>
               <span>📏 {gameState.snakeLength} length</span>
             </div>
-            {gameState.score >= highScore && gameState.score > 0 && (
+            {gameState.phase === 'won' && (
+              <div className="text-green-400 text-sm mb-2 font-semibold">🏆 You filled the board. You win.</div>
+            )}
+            {lastRunRecord && (
               <div className="text-green-400 text-sm mb-3 animate-pulse font-semibold">
-                🏆 New High Score!
+                New high score.
               </div>
             )}
             <button
@@ -320,10 +324,10 @@ export default function App() {
 
       {/* Stats Modal */}
       {showStats && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => setShowStats(false)}>
+        <div role="dialog" aria-modal="true" aria-labelledby="stats-title" className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => setShowStats(false)}>
           <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 max-w-sm w-full shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-white">📊 Statistics</h3>
+              <h3 id="stats-title" className="text-lg font-bold text-white">📊 Statistics</h3>
               <button onClick={() => setShowStats(false)} className="text-gray-400 hover:text-white p-1">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -332,6 +336,7 @@ export default function App() {
             </div>
             <div className="space-y-3">
               <StatRow label="Games Played" value={stats.gamesPlayed.toString()} />
+              <StatRow label="Games Won" value={stats.gamesWon.toString()} />
               <StatRow label="Total Score" value={stats.totalScore.toLocaleString()} />
               <StatRow label="Food Eaten" value={stats.totalFoodEaten.toString()} />
               <StatRow label="Best Combo" value={`×${stats.bestCombo}`} />

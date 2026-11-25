@@ -1,49 +1,37 @@
-import type { GameState, Direction, Vec2, Food, FoodType, Difficulty } from './types';
+import type { GameState, TickResult, Direction, Vec2, Food, FoodType, Difficulty } from './types';
 import { CONFIG, INITIAL_SNAKE, DIRECTION_VECTORS, OPPOSITE } from './constants';
 
 /**
- * Pure Game Engine - All game logic without rendering concerns
- * Follows functional programming principles for predictability
+ * Pure game rules. Food is always placed in a genuinely free cell, and a
+ * completely filled board is treated as a win instead of an impossible spawn.
  */
 
-export function createInitialState(difficulty: Difficulty): GameState {
-  const snake = INITIAL_SNAKE.map(s => ({ ...s }));
-  return {
-    phase: 'menu',
-    snake,
-    prevSnake: snake.map(s => ({ ...s })),
-    direction: 'RIGHT',
-    queuedDirection: null,
-    foods: [createFood(snake)],
-    score: 0,
-    combo: 0,
-    comboTimer: 0,
-    maxCombo: 0,
-    tickAccumulator: 0,
-    tickInterval: CONFIG.difficulties[difficulty].speed,
-    particles: [],
-    shake: { intensity: 0, duration: 0, elapsed: 0 },
-    foodEaten: 0,
-    timePlayed: 0,
-    deathAnimation: 0,
-  };
+function cellKey(pos: Vec2): string {
+  return String(pos.x) + ',' + String(pos.y);
 }
 
-export function createFood(snake: Vec2[], type?: FoodType): Food {
-  const { gridSize } = CONFIG;
-  let pos: Vec2;
-  let attempts = 0;
-  
-  do {
-    pos = {
-      x: Math.floor(Math.random() * gridSize),
-      y: Math.floor(Math.random() * gridSize),
-    };
-    attempts++;
-  } while (snake.some(s => s.x === pos.x && s.y === pos.y) && attempts < 100);
+export function createFood(
+  snake: Vec2[],
+  type?: FoodType,
+  reservedFoods: Food[] = [],
+): Food | null {
+  const occupied = new Set<string>();
 
-  // Determine food type
-  const foodType = type || rollFoodType();
+  for (const segment of snake) occupied.add(cellKey(segment));
+  for (const food of reservedFoods) occupied.add(cellKey(food.pos));
+
+  const available: Vec2[] = [];
+  for (let y = 0; y < CONFIG.gridSize; y += 1) {
+    for (let x = 0; x < CONFIG.gridSize; x += 1) {
+      const position = { x, y };
+      if (!occupied.has(cellKey(position))) available.push(position);
+    }
+  }
+
+  if (available.length === 0) return null;
+
+  const pos = available[Math.floor(Math.random() * available.length)];
+  const foodType = type ?? rollFoodType();
   const points = foodType === 'golden' ? 50 : foodType === 'bonus' ? 25 : 10;
   const lifetime = foodType === 'golden' ? 5000 : foodType === 'bonus' ? 8000 : 0;
 
@@ -59,66 +47,89 @@ export function createFood(snake: Vec2[], type?: FoodType): Food {
 function rollFoodType(): FoodType {
   const roll = Math.random() * 100;
   const { normal, bonus, golden } = CONFIG.foodWeights;
+
   if (roll < golden) return 'golden';
   if (roll < golden + bonus) return 'bonus';
   return 'normal';
 }
 
+export function createInitialState(difficulty: Difficulty): GameState {
+  const snake = INITIAL_SNAKE.map(segment => ({ ...segment }));
+  const firstFood = createFood(snake);
+
+  return {
+    phase: 'menu',
+    snake,
+    prevSnake: snake.map(segment => ({ ...segment })),
+    direction: 'RIGHT',
+    queuedDirection: null,
+    foods: firstFood ? [firstFood] : [],
+    score: 0,
+    combo: 0,
+    comboTimer: 0,
+    maxCombo: 0,
+    tickAccumulator: 0,
+    tickInterval: CONFIG.difficulties[difficulty].speed,
+    particles: [],
+    shake: { intensity: 0, duration: 0, elapsed: 0 },
+    foodEaten: 0,
+    timePlayed: 0,
+    deathAnimation: 0,
+  };
+}
+
 export function queueDirection(state: GameState, dir: Direction): GameState {
+  if (state.phase !== 'playing') return state;
+
+  const referenceDirection = state.queuedDirection ?? state.direction;
+  if (dir === referenceDirection || OPPOSITE[dir] === referenceDirection) return state;
   if (OPPOSITE[dir] === state.direction) return state;
-  if (dir === state.direction) return state;
+
   return { ...state, queuedDirection: dir };
 }
 
-export function tick(state: GameState): GameState {
-  if (state.phase !== 'playing') return state;
+function finishState(state: GameState, direction: Direction): GameState {
+  return {
+    ...state,
+    phase: 'gameover',
+    direction,
+    queuedDirection: null,
+    deathAnimation: 1,
+    shake: { intensity: 8, duration: 0.4, elapsed: 0 },
+  };
+}
 
-  // Apply queued direction
-  let direction = state.direction;
-  if (state.queuedDirection && OPPOSITE[state.queuedDirection] !== state.direction) {
-    direction = state.queuedDirection;
-  }
+export function tick(state: GameState): TickResult {
+  if (state.phase !== 'playing') return { ...state, ateFood: null };
 
-  // Calculate new head position
+  const direction =
+    state.queuedDirection && OPPOSITE[state.queuedDirection] !== state.direction
+      ? state.queuedDirection
+      : state.direction;
+
   const head = state.snake[0];
   const delta = DIRECTION_VECTORS[direction];
-  const newHead: Vec2 = {
-    x: head.x + delta.x,
-    y: head.y + delta.y,
-  };
+  const newHead = { x: head.x + delta.x, y: head.y + delta.y };
 
-  // Wall collision
   if (
     newHead.x < 0 ||
     newHead.x >= CONFIG.gridSize ||
     newHead.y < 0 ||
     newHead.y >= CONFIG.gridSize
   ) {
-    return {
-      ...state,
-      phase: 'gameover',
-      direction,
-      queuedDirection: null,
-      deathAnimation: 1,
-      shake: { intensity: 8, duration: 0.4, elapsed: 0 },
-    };
+    return { ...finishState(state, direction), ateFood: null };
   }
 
-  // Self collision (check against all but the tail since it will move)
-  const willEat = state.foods.some(f => f.pos.x === newHead.x && f.pos.y === newHead.y);
+  const foodIndex = state.foods.findIndex(
+    food => food.pos.x === newHead.x && food.pos.y === newHead.y,
+  );
+  const willEat = foodIndex !== -1;
   const bodyToCheck = willEat ? state.snake : state.snake.slice(0, -1);
-  if (bodyToCheck.some(s => s.x === newHead.x && s.y === newHead.y)) {
-    return {
-      ...state,
-      phase: 'gameover',
-      direction,
-      queuedDirection: null,
-      deathAnimation: 1,
-      shake: { intensity: 8, duration: 0.4, elapsed: 0 },
-    };
+
+  if (bodyToCheck.some(segment => segment.x === newHead.x && segment.y === newHead.y)) {
+    return { ...finishState(state, direction), ateFood: null };
   }
 
-  // Move snake
   const newSnake = [newHead, ...state.snake];
   let newFoods = [...state.foods];
   let newScore = state.score;
@@ -127,31 +138,27 @@ export function tick(state: GameState): GameState {
   let newMaxCombo = state.maxCombo;
   let newFoodEaten = state.foodEaten;
   let ateFood: Food | null = null;
+  let phase: GameState['phase'] = 'playing';
 
-  // Check food collision
-  const foodIndex = newFoods.findIndex(f => f.pos.x === newHead.x && f.pos.y === newHead.y);
-  if (foodIndex !== -1) {
+  if (willEat) {
     ateFood = newFoods[foodIndex];
-    newFoodEaten++;
-    
-    // Combo system
+    newFoodEaten += 1;
     newComboTimer = CONFIG.comboWindow;
-    newCombo++;
-    if (newCombo > newMaxCombo) newMaxCombo = newCombo;
-    
-    // Calculate score with combo multiplier
-    const comboMult = 1 + (newCombo - 1) * (CONFIG.comboMultiplier - 1);
-    newScore += Math.round(ateFood.points * comboMult);
+    newCombo += 1;
+    newMaxCombo = Math.max(newMaxCombo, newCombo);
 
-    // Replace eaten food
-    newFoods[foodIndex] = createFood(newSnake);
+    const comboMultiplier = 1 + (newCombo - 1) * (CONFIG.comboMultiplier - 1);
+    newScore += Math.round(ateFood.points * comboMultiplier);
 
-    // Don't remove tail (snake grows)
+    const remainingFoods = newFoods.filter((_, index) => index !== foodIndex);
+    const replacement = createFood(newSnake, undefined, remainingFoods);
+    newFoods = replacement ? [...remainingFoods, replacement] : remainingFoods;
+
+    if (!replacement) phase = 'won';
   } else {
-    newSnake.pop(); // Remove tail
+    newSnake.pop();
   }
 
-  // Update combo timer
   if (newComboTimer > 0) {
     newComboTimer -= state.tickInterval;
     if (newComboTimer <= 0) {
@@ -160,18 +167,27 @@ export function tick(state: GameState): GameState {
     }
   }
 
-  // Expire timed foods
   const now = Date.now();
-  newFoods = newFoods.map(f => {
-    if (f.lifetime > 0 && now - f.spawnTime > f.lifetime) {
-      return createFood(newSnake);
+  for (let index = 0; index < newFoods.length; index += 1) {
+    const food = newFoods[index];
+    if (food.lifetime <= 0 || now - food.spawnTime <= food.lifetime) continue;
+
+    const otherFoods = newFoods.filter((_, otherIndex) => otherIndex !== index);
+    const replacement = createFood(newSnake, undefined, otherFoods);
+    if (replacement) {
+      newFoods[index] = replacement;
+    } else {
+      newFoods.splice(index, 1);
+      index -= 1;
     }
-    return f;
-  });
+  }
+
+  if (newFoods.length === 0) phase = 'won';
 
   return {
     ...state,
-    prevSnake: state.snake.map(s => ({ ...s })),
+    phase,
+    prevSnake: state.snake.map(segment => ({ ...segment })),
     snake: newSnake,
     direction,
     queuedDirection: null,
@@ -182,17 +198,19 @@ export function tick(state: GameState): GameState {
     maxCombo: newMaxCombo,
     foodEaten: newFoodEaten,
     ateFood,
-  } as GameState & { ateFood: Food | null };
+  };
 }
 
-export function startGame(state: GameState, difficulty: Difficulty): GameState {
-  const snake = INITIAL_SNAKE.map(s => ({ ...s }));
+export function startGame(_state: GameState, difficulty: Difficulty): GameState {
+  const snake = INITIAL_SNAKE.map(segment => ({ ...segment }));
+  const food = createFood(snake);
+
   return {
     ...createInitialState(difficulty),
-    phase: 'playing',
+    phase: food ? 'playing' : 'won',
     snake,
-    prevSnake: snake.map(s => ({ ...s })),
-    foods: [createFood(snake)],
+    prevSnake: snake.map(segment => ({ ...segment })),
+    foods: food ? [food] : [],
   };
 }
 

@@ -44,6 +44,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
 
 export const DEFAULT_STATS: PlayerStats = {
   gamesPlayed: 0,
+  gamesWon: 0,
   totalScore: 0,
   totalFoodEaten: 0,
   bestScore: { easy: 0, medium: 0, hard: 0, insane: 0 },
