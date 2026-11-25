@@ -30,6 +30,12 @@ export class GameRenderer {
     return this.particles;
   }
 
+  getCellSize(): number {
+    const dpr = window.devicePixelRatio || 1;
+    const logicalWidth = this.canvas.clientWidth || this.canvas.width / dpr;
+    return logicalWidth / CONFIG.gridSize;
+  }
+
   /** Main render method called every frame */
   render(state: GameState, interpolation: number, dt: number) {
     const { gridSize } = CONFIG;
