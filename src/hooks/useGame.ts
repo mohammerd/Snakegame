@@ -160,18 +160,20 @@ export function useGame() {
         const tickResult = tick(nextState);
 
         if (tickResult.ateFood) {
-          const particleSystem = rendererRef.current?.getParticleSystem();
+          const renderer = rendererRef.current;
+          const particleSystem = renderer?.getParticleSystem();
+          const cellSize = renderer?.getCellSize() ?? CONFIG.cellSize;
           if (settingsRef.current.particlesEnabled && particleSystem) {
             if (tickResult.ateFood.type === 'golden') {
               particleSystem.emitGolden(
                 tickResult.ateFood.pos,
-                CONFIG.cellSize,
+                cellSize,
                 settingsRef.current.theme,
               );
             } else {
               particleSystem.emitEat(
                 tickResult.ateFood.pos,
-                CONFIG.cellSize,
+                cellSize,
                 settingsRef.current.theme,
                 tickResult.combo,
               );
@@ -194,7 +196,7 @@ export function useGame() {
             if (settingsRef.current.particlesEnabled && particleSystem) {
               particleSystem.emitDeath(
                 tickResult.snake[0],
-                CONFIG.cellSize,
+                rendererRef.current?.getCellSize() ?? CONFIG.cellSize,
                 settingsRef.current.theme,
               );
             }
