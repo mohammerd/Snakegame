@@ -35,8 +35,8 @@ export class GameRenderer {
     const { gridSize } = CONFIG;
     // Use CSS dimensions (logical pixels) not canvas pixel dimensions
     const dpr = window.devicePixelRatio || 1;
-    const logicalWidth = this.canvas.width / dpr;
-    const logicalHeight = this.canvas.height / dpr;
+    const logicalWidth = this.canvas.clientWidth || this.canvas.width / dpr;
+    const logicalHeight = this.canvas.clientHeight || this.canvas.height / dpr;
     const cellSize = logicalWidth / gridSize;
     const colors = THEME_COLORS[this.settings.theme];
 
@@ -56,7 +56,7 @@ export class GameRenderer {
 
     // Draw grid
     if (this.settings.showGrid) {
-      this.drawGrid(cellSize, colors.gridLine);
+      this.drawGrid(cellSize, colors.gridLine, logicalWidth, logicalHeight);
     }
 
     // Draw food
@@ -82,26 +82,26 @@ export class GameRenderer {
     if (state.phase === 'gameover' && state.deathAnimation > 0) {
       const flash = Math.sin(state.deathAnimation * Math.PI * 4) * 0.15;
       this.ctx.fillStyle = `rgba(239, 68, 68, ${Math.max(0, flash)})`;
-      this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+      this.ctx.fillRect(0, 0, logicalWidth, logicalHeight);
     }
 
     this.ctx.restore();
   }
 
-  private drawGrid(cellSize: number, color: string) {
+  private drawGrid(cellSize: number, color: string, width: number, height: number) {
     this.ctx.strokeStyle = color;
     this.ctx.lineWidth = 0.5;
-    const size = this.canvas.width;
 
-    for (let i = 0; i <= CONFIG.gridSize; i++) {
-      const pos = i * cellSize;
+    for (let index = 0; index <= CONFIG.gridSize; index += 1) {
+      const position = index * cellSize;
       this.ctx.beginPath();
-      this.ctx.moveTo(pos, 0);
-      this.ctx.lineTo(pos, size);
+      this.ctx.moveTo(position, 0);
+      this.ctx.lineTo(position, height);
       this.ctx.stroke();
+
       this.ctx.beginPath();
-      this.ctx.moveTo(0, pos);
-      this.ctx.lineTo(size, pos);
+      this.ctx.moveTo(0, position);
+      this.ctx.lineTo(width, position);
       this.ctx.stroke();
     }
   }
