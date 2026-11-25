@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback, useState } from 'react';
+import { useRef, useEffect, useCallback, useState, type ReactNode } from 'react';
 import { useGame } from './hooks/useGame';
 import { CONFIG } from './game/constants';
 import type { Direction, Difficulty, GameSettings } from './game/types';
@@ -360,7 +360,7 @@ export default function App() {
 }
 
 // D-Pad button component
-function DPadButton({ dir, onPress, children }: { dir: Direction; onPress: (d: Direction) => void; children: React.ReactNode }) {
+function DPadButton({ dir, onPress, children }: { dir: Direction; onPress: (d: Direction) => void; children: ReactNode }) {
   return (
     <button
       onTouchStart={(e) => { e.preventDefault(); onPress(dir); }}
